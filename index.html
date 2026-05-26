@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <title>AI or Nah?</title>
+  <link rel="manifest" href="/manifest.json"/>
+  <meta name="theme-color" content="#ff2d6b"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="apple-mobile-web-app-title" content="AI or Nah?"/>
+  <link rel="apple-touch-icon" href="/icon-192.svg"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Boogaloo&family=DM+Sans:wght@400;600&display=swap" rel="stylesheet"/>
+
+  <style>
+    :root {
+      --pink: #ff2d6b;
+      --yellow: #ffe135;
+      --cyan: #00e5cc;
+      --dark: #0d0d0d;
+      --card: #161616;
+      --border: #2a2a2a;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+    body {
+      background: var(--dark);
+      color: #fff;
+      font-family: 'DM Sans', sans-serif;
+      min-height: 100dvh;
+      overflow-x: hidden;
+    }
+
+    /* Noise overlay */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.4;
+    }
+
+    .app { position: relative; z-index: 1; max-width: 480px; margin: 0 auto; padding: 0 20px 40px; }
+
+    /* Header */
+    .header {
+      text-align: center;
+      padding: 48px 0 32px;
+    }
+
+    .logo {
+      font-family: 'Boogaloo', cursive;
+      font-size: 64px;
+      line-height: 1;
+      background: linear-gradient(135deg, var(--pink) 0%, var(--yellow) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      filter: drop-shadow(0 0 20px rgba(255,45,107,0.4));
+    }
+
+    .tagline {
+      margin-top: 8px;
+      font-size: 15px;
+      color: #888;
+      letter-spacing: 0.5px;
+    }
+
+    /* Drop zone */
+    .drop-zone {
+      border: 2.5px dashed var(--border);
+      border-radius: 24px;
+      padding: 40px 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: var(--card);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .drop-zone:hover, .drop-zone.drag-over {
+      border-color: var(--pink);
+      background: #1e0d12;
+    }
+
+    .drop-zone input[type=file] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      width: 100%;
+      height: 100%;
+    }
+
+    .drop-icon { font-size: 52px; margin-bottom: 12px; display: block; }
+
+    .drop-title {
+      font-family: 'Boogaloo', cursive;
+      font-size: 26px;
+      color: #fff;
+      margin-bottom: 6px;
+    }
+
+    .drop-sub { font-size: 13px; color: #666; line-height: 1.5; }
+
+    .drop-sub span {
+      display: inline-block;
+      background: #222;
+      border-radius: 6px;
+      padding: 2px 8px;
+      margin: 3px 2px;
+      color: #aaa;
+      font-size: 12px;
+    }
+
+    /* Preview */
+    .preview-wrap {
+      position: relative;
+      border-radius: 20px;
+      overflow: hidden;
+      background: var(--card);
+      border: 1px solid var(--border);
+    }
+
+    .preview-wrap img {
+      width: 100%;
+      max-height: 300px;
+      object-fit: cover;
+      display: block;
+    }
+
+    .preview-clear {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: rgba(0,0,0,0.7);
+      border: none;
+      color: #fff;
+      font-size: 18px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Text input */
+    .or-divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 20px 0;
+      color: #444;
+      font-size: 13px;
+    }
+    .or-divider::before, .or-divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    .text-input {
+      width: 100%;
+      background: var(--card);
+      border: 2px solid var(--border);
+      border-radius: 16px;
+      padding: 16px 18px;
+      color: #fff;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px;
+      resize: none;
+      min-height: 100px;
+      outline: none;
+      transition: border-color 0.2s;
+      line-height: 1.5;
+    }
+
+    .text-input:focus { border-color: var(--pink); }
+    .text-input::placeholder { color: #444; }
+
+    /* Analyze button */
+    .analyze-btn {
+      width: 100%;
+      margin-top: 16px;
+      padding: 18px;
+      border: none;
+      border-radius: 16px;
+      font-family: 'Boogaloo', cursive;
+      font-size: 26px;
+      letter-spacing: 1px;
+      cursor: pointer;
+      background: linear-gradient(135deg, var(--pink), #ff6b35);
+      color: #fff;
+      transition: all 0.15s;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 8px 32px rgba(255,45,107,0.35);
+    }
+
+    .analyze-btn:active { transform: scale(0.97); }
+    .analyze-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    .analyze-btn .btn-glow {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,0.15), transparent);
+    }
+
+    /* Loading */
+    .loading-wrap {
+      text-align: center;
+      padding: 48px 0;
+    }
+
+    .loading-emoji {
+      font-size: 56px;
+      display: block;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      25% { transform: rotate(-10deg); }
+      75% { transform: rotate(10deg); }
+      100% { transform: rotate(0deg); }
+    }
+
+    .loading-text {
+      margin-top: 16px;
+      font-family: 'Boogaloo', cursive;
+      font-size: 22px;
+      color: #888;
+    }
+
+    .loading-dots::after {
+      content: '';
+      animation: dots 1.5s steps(4, end) infinite;
+    }
+
+    @keyframes dots {
+      0%  { content: ''; }
+      25% { content: '.'; }
+      50% { content: '..'; }
+      75% { content: '...'; }
+    }
+
+    /* Result */
+    .result-card {
+      border-radius: 24px;
+      overflow: hidden;
+      animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    @keyframes popIn {
+      from { transform: scale(0.8); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+
+    .verdict-banner {
+      padding: 40px 24px 32px;
+      text-align: center;
+    }
+
+    .verdict-emoji { font-size: 72px; display: block; margin-bottom: 12px; }
+
+    .verdict-text {
+      font-family: 'Boogaloo', cursive;
+      font-size: 52px;
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+
+    .verdict-sub {
+      font-size: 14px;
+      opacity: 0.7;
+      margin-top: 6px;
+    }
+
+    /* Confidence bar */
+    .conf-wrap { margin: 20px 0 0; }
+
+    .conf-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      color: rgba(255,255,255,0.6);
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .conf-track {
+      height: 8px;
+      background: rgba(255,255,255,0.15);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .conf-fill {
+      height: 100%;
+      border-radius: 4px;
+      transition: width 1s ease;
+    }
+
+    .result-details {
+      background: var(--card);
+      padding: 24px;
+    }
+
+    .detail-section { margin-bottom: 24px; }
+
+    .detail-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: #555;
+      margin-bottom: 10px;
+    }
+
+    .detail-text {
+      font-size: 15px;
+      color: #ccc;
+      line-height: 1.65;
+    }
+
+    .signals-list { display: flex; flex-direction: column; gap: 8px; }
+
+    .signal-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      background: #1e1e1e;
+      border-radius: 10px;
+      padding: 10px 14px;
+    }
+
+    .signal-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      margin-top: 5px;
+      flex-shrink: 0;
+    }
+
+    .signal-text { font-size: 14px; color: #bbb; line-height: 1.4; }
+
+    /* Share result button */
+    .share-btn {
+      width: 100%;
+      padding: 16px;
+      border-radius: 14px;
+      border: 2px solid var(--border);
+      background: transparent;
+      color: #fff;
+      font-family: 'Boogaloo', cursive;
+      font-size: 22px;
+      cursor: pointer;
+      margin-top: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      transition: all 0.2s;
+    }
+
+    .share-btn:active { background: #1e1e1e; }
+
+    .again-btn {
+      width: 100%;
+      padding: 16px;
+      border-radius: 14px;
+      border: none;
+      background: linear-gradient(135deg, var(--pink), #ff6b35);
+      color: #fff;
+      font-family: 'Boogaloo', cursive;
+      font-size: 22px;
+      cursor: pointer;
+      margin-top: 8px;
+      box-shadow: 0 6px 24px rgba(255,45,107,0.3);
+    }
+
+    /* Install banner */
+    .install-banner {
+      background: linear-gradient(135deg, #1a0a1e, #0d1a2e);
+      border: 1px solid #2a1a3e;
+      border-radius: 16px;
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 24px;
+      cursor: pointer;
+    }
+
+    .install-icon { font-size: 32px; flex-shrink: 0; }
+
+    .install-text { flex: 1; }
+    .install-title { font-size: 15px; font-weight: 600; color: #fff; }
+    .install-sub { font-size: 12px; color: #777; margin-top: 2px; }
+
+    .install-arrow {
+      font-size: 20px;
+      color: var(--cyan);
+    }
+
+    /* Shared notice */
+    .shared-notice {
+      background: linear-gradient(135deg, #0d1e0d, #0a1a1a);
+      border: 1px solid #1e3e1e;
+      border-radius: 12px;
+      padding: 12px 16px;
+      font-size: 13px;
+      color: var(--cyan);
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* AI verdict colors */
+    .verdict-ai { background: linear-gradient(160deg, #1a0010, #2a0018); }
+    .verdict-ai .verdict-text { color: var(--pink); text-shadow: 0 0 30px rgba(255,45,107,0.5); }
+    .verdict-ai .conf-fill { background: linear-gradient(90deg, var(--pink), #ff6b35); }
+    .verdict-ai .signal-dot { background: var(--pink); }
+
+    .verdict-human { background: linear-gradient(160deg, #001a10, #001a1a); }
+    .verdict-human .verdict-text { color: var(--cyan); text-shadow: 0 0 30px rgba(0,229,204,0.4); }
+    .verdict-human .conf-fill { background: linear-gradient(90deg, #00c896, var(--cyan)); }
+    .verdict-human .signal-dot { background: var(--cyan); }
+
+    .verdict-maybe { background: linear-gradient(160deg, #1a1200, #1a0800); }
+    .verdict-maybe .verdict-text { color: var(--yellow); text-shadow: 0 0 30px rgba(255,225,53,0.4); }
+    .verdict-maybe .conf-fill { background: linear-gradient(90deg, var(--yellow), #ffaa00); }
+    .verdict-maybe .signal-dot { background: var(--yellow); }
+
+    /* History */
+    .history-wrap { margin-top: 32px; }
+    .history-title {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: #444;
+      margin-bottom: 12px;
+    }
+
+    .history-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--card);
+      border-radius: 12px;
+      padding: 12px 16px;
+      margin-bottom: 8px;
+      border: 1px solid var(--border);
+    }
+
+    .history-desc { font-size: 13px; color: #666; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-right: 12px; }
+    .history-badge {
+      font-family: 'Boogaloo', cursive;
+      font-size: 14px;
+      padding: 3px 10px;
+      border-radius: 20px;
+      flex-shrink: 0;
+    }
+
+    .badge-ai { background: rgba(255,45,107,0.15); color: var(--pink); }
+    .badge-human { background: rgba(0,229,204,0.15); color: var(--cyan); }
+    .badge-maybe { background: rgba(255,225,53,0.15); color: var(--yellow); }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="header">
+      <div class="logo">AI or Nah? 🤔</div>
+      <div class="tagline">Drop an ad. Get the truth.</div>
+    </div>
+
+    <div id="installBanner" class="install-banner" style="display:none">
+      <div class="install-icon">📲</div>
+      <div class="install-text">
+        <div class="install-title">Add to Home Screen</div>
+        <div class="install-sub">Then share any ad directly to this app</div>
+      </div>
+      <div class="install-arrow">→</div>
+    </div>
+
+    <div id="sharedNotice" class="shared-notice" style="display:none">
+      ✨ <span>Got your shared content — ready to analyze!</span>
+    </div>
+
+    <!-- Input screen -->
+    <div id="inputScreen">
+      <div class="drop-zone" id="dropZone">
+        <input type="file" id="fileInput" accept="image/*,video/*"/>
+        <span class="drop-icon">📸</span>
+        <div class="drop-title">Drop or tap to upload</div>
+        <div class="drop-sub">
+          <span>Screenshot</span><span>Photo</span><span>Image</span>
+        </div>
+      </div>
+
+      <div id="previewArea" style="display:none; margin-top: 16px;"></div>
+
+      <div class="or-divider">or describe it</div>
+
+      <textarea
+        class="text-input"
+        id="textInput"
+        placeholder="e.g. 'Instagram ad with flawless model selling skincare, super smooth skin, no pores, very symmetrical face' — or paste a URL"
+        rows="4"
+      ></textarea>
+
+      <button class="analyze-btn" id="analyzeBtn" onclick="runAnalysis()">
+        <div class="btn-glow"></div>
+        🔍 Is it AI?
+      </button>
+    </div>
+
+    <!-- Loading screen -->
+    <div id="loadingScreen" style="display:none">
+      <div class="loading-wrap">
+        <span class="loading-emoji">🧠</span>
+        <div class="loading-text">Sniffing it out<span class="loading-dots"></span></div>
+      </div>
+    </div>
+
+    <!-- Result screen -->
+    <div id="resultScreen" style="display:none"></div>
+
+    <!-- History -->
+    <div id="historyWrap" class="history-wrap" style="display:none">
+      <div class="history-title">Recent checks</div>
+      <div id="historyList"></div>
+    </div>
+  </div>
+
+  <script>
+    // ── State ──────────────────────────────────────────────
+    let currentImageBase64 = null;
+    let currentImageMime = null;
+    let history = JSON.parse(localStorage.getItem('aiornahHistory') || '[]');
+
+    // ── Service Worker ─────────────────────────────────────
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').then(() => {
+        // Check for shared data
+        if (location.search.includes('shared=1')) checkSharedData();
+      });
+    }
+
+    // ── PWA Install prompt ─────────────────────────────────
+    let deferredPrompt;
+    window.addEventListener('beforeinstallprompt', e => {
+      e.preventDefault();
+      deferredPrompt = e;
+      document.getElementById('installBanner').style.display = 'flex';
+    });
+
+    document.getElementById('installBanner').addEventListener('click', async () => {
+      if (!deferredPrompt) return;
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') document.getElementById('installBanner').style.display = 'none';
+      deferredPrompt = null;
+    });
+
+    // ── Shared data (from share sheet) ─────────────────────
+    async function checkSharedData() {
+      try {
+        const cache = await caches.open('aiornahv1');
+        const res = await cache.match('/shared-data');
+        if (!res) return;
+        const data = await res.json();
+        // Only use if fresh (within 30 seconds)
+        if (Date.now() - data.timestamp > 30000) return;
+
+        document.getElementById('sharedNotice').style.display = 'flex';
+
+        if (data.type === 'image' && data.base64) {
+          showImagePreview(`data:${data.mimeType};base64,${data.base64}`);
+          currentImageBase64 = data.base64;
+          currentImageMime = data.mimeType;
+        } else {
+          const combined = [data.title, data.text, data.url].filter(Boolean).join(' — ');
+          document.getElementById('textInput').value = combined;
+        }
+
+        // Clean up
+        await cache.delete('/shared-data');
+        history.replaceState({}, '', '/index.html');
+      } catch (e) {
+        console.log('No shared data:', e);
+      }
+    }
+
+    // ── File input / drag drop ─────────────────────────────
+    const fileInput = document.getElementById('fileInput');
+    const dropZone = document.getElementById('dropZone');
+
+    fileInput.addEventListener('change', e => handleFile(e.target.files[0]));
+
+    dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+    dropZone.addEventListener('drop', e => {
+      e.preventDefault();
+      dropZone.classList.remove('drag-over');
+      handleFile(e.dataTransfer.files[0]);
+    });
+
+    function handleFile(file) {
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = e => {
+        const dataUrl = e.target.result;
+        const base64 = dataUrl.split(',')[1];
+        currentImageBase64 = base64;
+        currentImageMime = file.type;
+        showImagePreview(dataUrl);
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function showImagePreview(dataUrl) {
+      const previewArea = document.getElementById('previewArea');
+      previewArea.innerHTML = `
+        <div class="preview-wrap">
+          <img src="${dataUrl}" alt="Preview"/>
+          <button class="preview-clear" onclick="clearImage()">✕</button>
+        </div>
+      `;
+      previewArea.style.display = 'block';
+      dropZone.style.display = 'none';
+    }
+
+    function clearImage() {
+      currentImageBase64 = null;
+      currentImageMime = null;
+      document.getElementById('previewArea').style.display = 'none';
+      document.getElementById('previewArea').innerHTML = '';
+      document.getElementById('dropZone').style.display = 'block';
+      fileInput.value = '';
+    }
+
+    // ── Analysis ───────────────────────────────────────────
+    async function runAnalysis() {
+      const text = document.getElementById('textInput').value.trim();
+      if (!currentImageBase64 && !text) {
+        alert('Add an image or describe what you saw!');
+        return;
+      }
+
+      show('loadingScreen');
+
+      try {
+        const result = await callClaude(text, currentImageBase64, currentImageMime);
+        showResult(result, text || 'Image upload');
+        saveHistory(text || 'Image upload', result.verdict);
+      } catch (e) {
+        alert('Something went wrong. Try describing the content in text instead.');
+        show('inputScreen');
+      }
+    }
+
+    async function callClaude(text, imageBase64, imageMime) {
+      const messages = [];
+      const content = [];
+
+      if (imageBase64) {
+        content.push({
+          type: 'image',
+          source: { type: 'base64', media_type: imageMime || 'image/jpeg', data: imageBase64 }
+        });
+      }
+
+      const prompt = imageBase64
+        ? `Analyze this image${text ? ` and this description: "${text}"` : ''}. Is it AI-generated?`
+        : `Analyze this ad/post description and tell me if it's AI-generated: "${text}"`;
+
+      content.push({ type: 'text', text: prompt });
+      messages.push({ role: 'user', content });
+
+      const system = `You are an expert at detecting AI-generated content — images, videos, and ads. Be fun and direct. 
+
+Respond ONLY with valid JSON, no markdown, no extra text:
+{
+  "verdict": "DEFINITELY AI" | "PROBABLY AI" | "PROBABLY HUMAN" | "DEFINITELY HUMAN",
+  "confidence": <number 0-100>,
+  "emoji": <one relevant emoji>,
+  "explanation": "<2 sentence plain English verdict, casual and direct tone>",
+  "signals": ["<signal 1>", "<signal 2>", "<signal 3>"]
+}
+
+Look for: uncanny symmetry, too-perfect skin, watermarks (Midjourney, DALL-E, Sora), weird hands/fingers, AI writing patterns (overuse of 'unleash', 'transform', 'revolutionary'), stock-photo vibes, impossible lighting, or suspiciously flawless aesthetics. Be decisive.`;
+
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 1000,
+          system,
+          messages
+        })
+      });
+
+      const data = await res.json();
+      const raw = data.content?.map(b => b.text || '').join('') || '';
+      const clean = raw.replace(/```json|```/g, '').trim();
+      return JSON.parse(clean);
+    }
+
+    // ── Render result ──────────────────────────────────────
+    function showResult(result, desc) {
+      const isAI = result.verdict.includes('AI');
+      const isMaybe = result.verdict.includes('PROBABLY');
+      const verdictClass = isAI ? 'verdict-ai' : (isMaybe && !isAI ? 'verdict-human' : 'verdict-human');
+      const actualClass = result.verdict.includes('AI') ? 'verdict-ai' : 'verdict-human';
+
+      const el = document.getElementById('resultScreen');
+      el.innerHTML = `
+        <div class="result-card">
+          <div class="verdict-banner ${actualClass}">
+            <span class="verdict-emoji">${result.emoji || (isAI ? '🤖' : '👤')}</span>
+            <div class="verdict-text">${result.verdict}</div>
+            <div class="verdict-sub">with ${result.confidence}% confidence</div>
+            <div class="conf-wrap">
+              <div class="conf-label"><span>Confidence</span><span>${result.confidence}%</span></div>
+              <div class="conf-track">
+                <div class="conf-fill" id="confFill" style="width:0%"></div>
+              </div>
+            </div>
+          </div>
+          <div class="result-details">
+            <div class="detail-section">
+              <div class="detail-label">The verdict</div>
+              <div class="detail-text">${result.explanation}</div>
+            </div>
+            <div class="detail-section">
+              <div class="detail-label">Signals detected</div>
+              <div class="signals-list">
+                ${result.signals?.map(s => `
+                  <div class="signal-item">
+                    <div class="signal-dot"></div>
+                    <div class="signal-text">${s}</div>
+                  </div>
+                `).join('') || ''}
+              </div>
+            </div>
+          </div>
+        </div>
+        <button class="share-btn" onclick="shareResult('${result.verdict}', ${result.confidence})">
+          📤 Share this result
+        </button>
+        <button class="again-btn" onclick="resetApp()">
+          Check another one
+        </button>
+      `;
+
+      show('resultScreen');
+
+      // Animate confidence bar
+      setTimeout(() => {
+        const fill = document.getElementById('confFill');
+        if (fill) fill.style.width = result.confidence + '%';
+      }, 100);
+    }
+
+    // ── Share result ───────────────────────────────────────
+    async function shareResult(verdict, confidence) {
+      const text = `${verdict} (${confidence}% confidence) — checked with AI or Nah? 🤔`;
+      if (navigator.share) {
+        try {
+          await navigator.share({ title: 'AI or Nah?', text, url: location.href });
+        } catch (e) {}
+      } else {
+        navigator.clipboard?.writeText(text);
+        alert('Copied to clipboard!');
+      }
+    }
+
+    // ── History ────────────────────────────────────────────
+    function saveHistory(desc, verdict) {
+      history.unshift({ desc: desc.slice(0, 50), verdict, time: Date.now() });
+      history = history.slice(0, 5);
+      localStorage.setItem('aiornahHistory', JSON.stringify(history));
+      renderHistory();
+    }
+
+    function renderHistory() {
+      if (!history.length) return;
+      const wrap = document.getElementById('historyWrap');
+      const list = document.getElementById('historyList');
+      wrap.style.display = 'block';
+      list.innerHTML = history.map(h => {
+        const isAI = h.verdict.includes('AI');
+        const isMaybe = h.verdict.includes('PROBABLY');
+        const badgeClass = isAI ? 'badge-ai' : (isMaybe ? 'badge-maybe' : 'badge-human');
+        return `
+          <div class="history-item">
+            <div class="history-desc">${h.desc || 'Image check'}</div>
+            <div class="history-badge ${badgeClass}">${h.verdict}</div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // ── Helpers ────────────────────────────────────────────
+    function show(id) {
+      ['inputScreen', 'loadingScreen', 'resultScreen'].forEach(s => {
+        document.getElementById(s).style.display = s === id ? 'block' : 'none';
+      });
+    }
+
+    function resetApp() {
+      clearImage();
+      document.getElementById('textInput').value = '';
+      document.getElementById('sharedNotice').style.display = 'none';
+      show('inputScreen');
+    }
+
+    // ── Init ───────────────────────────────────────────────
+    renderHistory();
+    if (location.search.includes('shared=1') && 'serviceWorker' in navigator) {
+      // SW will handle this after registration
+    }
+  </script>
+</body>
+</html>
